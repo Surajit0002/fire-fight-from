@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   createColumnHelper,
   flexRender,
@@ -7,16 +7,16 @@ import {
   getSortedRowModel,
   SortingState,
 } from '@tanstack/react-table';
-import { ChevronLeft, Search, Filter, Download, Eye, ArrowUpDown } from 'lucide-react';
+import { ChevronLeft, Search, Filter, Download, Eye, ArrowUpDown, CheckCircle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTournamentStore } from '../../store/tournamentStore';
 
 interface Registration {
   id: string;
   type: 'solo' | 'duo' | 'squad';
-  teamName: string;
-  players: string;
-  uids: string;
-  timestamp: string;
+  name: string;
+  players: { name: string; game_uid: string }[];
+  created_at: string;
   status: 'pending' | 'approved' | 'rejected';
 }
 
@@ -25,37 +25,15 @@ const columnHelper = createColumnHelper<Registration>();
 const AdminRegistrations = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
+  const { teams, fetchTeams, updateTeamStatus, loading } = useTournamentStore();
 
-  // Mock data
-  const data: Registration[] = [
-    {
-      id: '1',
-      type: 'squad',
-      teamName: 'Phoenix Raiders',
-      players: 'John, Mike, Sarah, Alex',
-      uids: '123456, 234567, 345678, 456789',
-      timestamp: '2024-03-15 14:30',
-      status: 'approved',
-    },
-    {
-      id: '2',
-      type: 'duo',
-      teamName: 'Dynamic Duo',
-      players: 'Emma, James',
-      uids: '567890, 678901',
-      timestamp: '2024-03-15 15:45',
-      status: 'pending',
-    },
-    {
-      id: '3',
-      type: 'solo',
-      teamName: '-',
-      players: 'David',
-      uids: '789012',
-      timestamp: '2024-03-15 16:15',
-      status: 'rejected',
-    },
-  ];
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
+
+  const handleStatusUpdate = async (teamId: string, status: 'approved' | 'rejected') => {
+    await updateTeamStatus(teamId, status);
+  };
 
   const columns = [
     columnHelper.accessor('id', {
@@ -75,21 +53,22 @@ const AdminRegistrations = () => {
         </span>
       ),
     }),
-    columnHelper.accessor('teamName', {
+    columnHelper.accessor('name', {
       header: 'Team/Player Name',
-      cell: info => info.getValue(),
+      cell: info => info.getValue() || '-',
     }),
     columnHelper.accessor('players', {
       header: 'Players',
-      cell: info => info.getValue(),
+      cell: info => info.getValue().map(p => p.name).join(', '),
     }),
-    columnHelper.accessor('uids', {
+    columnHelper.accessor(row => row.players.map(p => p.game_uid).join(', '), {
+      id: 'game_uids',
       header: 'Game UIDs',
       cell: info => info.getValue(),
     }),
-    columnHelper.accessor('timestamp', {
+    columnHelper.accessor('created_at', {
       header: 'Registered On',
-      cell: info => info.getValue(),
+      cell: info => new Date(info.getValue()).toLocaleString(),
     }),
     columnHelper.accessor('status', {
       header: 'Status',
@@ -106,17 +85,33 @@ const AdminRegistrations = () => {
     }),
     columnHelper.display({
       id: 'actions',
-      header: '',
-      cell: () => (
-        <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-          <Eye className="w-4 h-4" />
-        </button>
+      header: 'Actions',
+      cell: info => (
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => handleStatusUpdate(info.row.original.id, 'approved')}
+            className="p-2 hover:bg-green-500/20 rounded-lg transition-colors text-green-400"
+            title="Approve"
+          >
+            <CheckCircle className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => handleStatusUpdate(info.row.original.id, 'rejected')}
+            className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400"
+            title="Reject"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+          <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
       ),
     }),
   ];
 
   const table = useReactTable({
-    data,
+    data: teams,
     columns,
     state: {
       sorting,
@@ -126,6 +121,14 @@ const AdminRegistrations = () => {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

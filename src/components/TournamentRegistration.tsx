@@ -3,6 +3,7 @@ import TournamentTypeSelector from './steps/TournamentTypeSelector';
 import PlayerOrTeamForm from './steps/PlayerOrTeamForm';
 import PaymentConfirmation from './steps/PaymentConfirmation';
 import StepIndicator from './ui/StepIndicator';
+import { useTournamentStore } from '../store/tournamentStore';
 
 export type TournamentType = 'solo' | 'duo' | 'squad' | '';
 export type PlayerInfo = {
@@ -28,6 +29,9 @@ const TournamentRegistration: React.FC = () => {
     paymentScreenshot: null,
   });
   const [registrationComplete, setRegistrationComplete] = useState(false);
+  const createRegistration = useTournamentStore(state => state.createRegistration);
+  const loading = useTournamentStore(state => state.loading);
+  const error = useTournamentStore(state => state.error);
 
   const handleTournamentTypeSelect = (type: TournamentType) => {
     const playersCount = type === 'solo' ? 1 : type === 'duo' ? 2 : 4;
@@ -45,10 +49,13 @@ const TournamentRegistration: React.FC = () => {
     setFormData({ ...formData, ...data });
   };
 
-  const handleSubmit = () => {
-    // In a real application, you would send the form data to a server here
-    console.log('Form submitted:', formData);
-    setRegistrationComplete(true);
+  const handleSubmit = async () => {
+    try {
+      await createRegistration(formData);
+      setRegistrationComplete(true);
+    } catch (err) {
+      console.error('Registration failed:', err);
+    }
   };
 
   const goToNextStep = () => {
@@ -63,7 +70,6 @@ const TournamentRegistration: React.FC = () => {
     }
   };
 
-  // Reset the form to start over
   const resetForm = () => {
     setFormData({
       tournamentType: '',
@@ -75,6 +81,28 @@ const TournamentRegistration: React.FC = () => {
     setCurrentStep(1);
     setRegistrationComplete(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-500/10 border border-red-500 rounded-lg p-4 text-red-500">
+        <p>Error: {error}</p>
+        <button 
+          onClick={resetForm}
+          className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto">

@@ -1,15 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, UserPlus, Users as UsersThree, Search, Filter, Download, User } from 'lucide-react';
+import { useTournamentStore } from '../../store/tournamentStore';
 
 const AdminDashboard = () => {
-  // Mock data for demonstration
+  const { teams, fetchTeams, loading } = useTournamentStore();
+
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
+
   const stats = {
-    total: 156,
-    solo: 45,
-    duo: 38,
-    squad: 73
+    total: teams.length,
+    solo: teams.filter(team => team.type === 'solo').length,
+    duo: teams.filter(team => team.type === 'duo').length,
+    squad: teams.filter(team => team.type === 'squad').length
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
