@@ -66,6 +66,14 @@ export const useTournamentStore = create<TournamentState>((set) => ({
   createRegistration: async (data) => {
     set({ loading: true });
     try {
+      // Get the current user's ID
+      const { data: userResponse } = await supabase.auth.getUser();
+      const userId = userResponse?.user?.id;
+
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       // Insert team
       const { data: team, error: teamError } = await supabase
         .from('teams')
@@ -73,7 +81,7 @@ export const useTournamentStore = create<TournamentState>((set) => ({
           name: data.teamName,
           type: data.tournamentType,
           logo_url: data.teamLogo,
-          user_id: supabase.auth.getUser().then(res => res.data.user?.id)
+          user_id: userId
         })
         .select()
         .single();
