@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, UserPlus, Users as UsersThree, Search, Filter, Download } from 'lucide-react';
+import { Users, UserPlus, Users as UsersThree, Search, Filter, Download, User } from 'lucide-react';
 
 const AdminDashboard = () => {
   // Mock data for demonstration
